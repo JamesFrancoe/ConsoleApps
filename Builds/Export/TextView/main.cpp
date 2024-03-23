@@ -45,5 +45,13 @@ int main(int argc, char** argv)
 		
 		Program.Register(SCP);
 	}
+	FileSyntax TXT = ".txt";
+	{
+		Syntax SyntaxWords[]
+		{
+			
+		}
+	}
+
 	Program.Start(file);
 } 

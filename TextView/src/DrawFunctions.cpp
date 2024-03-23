@@ -89,21 +89,26 @@ void TextView::DrawFile()
 			// if one letter
 			if (token[1] == '\0') // special case for comment
 			{
-				if (!(syntaxConfig.CheckNumbers && isdigit(token[0]))
-					&& !(syntaxConfig.CheckComments && token[0] == ';'))
+				if (SyntaxProcess)
 				{
-					WriteToken(token);
-					continue;
+					if (!(curFile->syntaxConfig.CheckNumbers && isdigit(token[0]))
+						&& !(curFile->syntaxConfig.CheckComments && token[0] == ';'))
+					{
+						WriteToken(token);
+						continue;
+					}
 				}
 			}
 			bool printed = false;
+			
 			if (SyntaxProcess)
 			{
-				if (!comment && syntaxConfig.CheckComments)
+				SyntaxConfig &curConfig = curFile->syntaxConfig;
+				if (!comment && curConfig.CheckComments)
 				{
-					for (int i = 0; i < syntaxConfig.CommentPrefixesCount; i++)
+					for (int i = 0; i < curConfig.CommentPrefixesCount; i++)
 					{
-						if (strspn(syntaxConfig.CommentPrefixes[i], token))
+						if (strspn(curConfig.CommentPrefixes[i], token))
 						{
 							comment = true;
 							break;
@@ -117,14 +122,14 @@ void TextView::DrawFile()
 					continue;
 				}
 
-				if (syntaxConfig.CheckStrings && token[0] == '\"')
+				if (curConfig.CheckStrings && token[0] == '\"')
 				{
 					WriteToken(token, COLOR(String));
 					printed = true;
 					continue;
 				}
 
-				if (syntaxConfig.CheckNumbers)
+				if (curConfig.CheckNumbers)
 				{
 					if (isdigit(token[0]))
 					{
@@ -136,7 +141,7 @@ void TextView::DrawFile()
 				if (!printed && SyntaxProcess)
 				{
 					FNVHash hash = HashFNV(token);
-					for (const auto& c : syntaxList)
+					for (const auto& c : curFile->syntaxList)
 					{
 						if (hash == c.hash)
 						{
@@ -159,7 +164,7 @@ void TextView::DrawFile()
 
 				if (!printed)
 				{
-					if (syntaxConfig.TreatGetSetAsFunc)
+					if (curFile->syntaxConfig.TreatGetSetAsFunc)
 					{
 						char cur = tolower(token[0]);
 						if (cur == 's' || cur == 'g')

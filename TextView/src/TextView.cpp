@@ -3,9 +3,8 @@
 void TextView::ReadLines()
 {
 	if (!gFile)
-	{
 		return;
-	}
+
 	int Line = 0;
 	while (true)
 	{
@@ -24,7 +23,15 @@ void TextView::ReadLines()
 				int j = 0;
 				for (int i = 0; buffer[i]; i++)
 				{
-
+					if (j == current.maxToken)
+					{
+						unsigned int newsize = j + 32U;
+						token = (char*)realloc(token, newsize);
+						for (int ii = j; ii < newsize ; ii++)
+						{
+							token[ii] = '\0';
+						}
+					}
 					if (buffer[i] == '\n')
 					{
 						if (token)
@@ -40,13 +47,20 @@ void TextView::ReadLines()
 						break;
 					}
 
-					if (buffer[i] == '\t' || buffer[i] == '{' || buffer[i] == '}')
+					if (buffer[i] == '\t' 
+						|| buffer[i] == '{' || buffer[i] == '}')
 					{
 						char* cToken = (char*)malloc(2);
 						if (cToken)
 						{
 							cToken[0] = buffer[i];
 							cToken[1] = '\0';
+							if (token && token[0])
+							{
+								Tokens->push_back(token);
+								token = (char*)calloc(current.maxToken, 1);
+								j = 0;
+							}
 							Tokens->push_back(cToken);
 							continue;
 						}
@@ -363,7 +377,22 @@ static char* getFileNameOnly(char* filename)
 	}
 	return nullptr;
 }
-
+static inline char* strlow(char* in)
+{
+	for (int i = 0; in[i]; i++)
+	{
+		in[i] = tolower(in[i]);
+	}
+	return in;
+}
+static inline char* strupp(char* in)
+{
+	for (int i = 0; in[i]; i++)
+	{
+		in[i] = toupper(in[i]);
+	}
+	return in;
+}
 void TextView::Start(char* filename)
 {
 	if (filename)
@@ -381,10 +410,21 @@ void TextView::Start(char* filename)
 	else PushMessage("Open a file with the command Open {file}");
 
 	PushMessage("Type [H]elp for list of commands. Press enter to rescale UI");
-	
-	if (syntaxList.size())
-		SyntaxProcess = true;
+	if (this->filename)
+	{
+		memcpy_s(lwFilename, 20, this->filename, strnlen(this->filename, 20));
+		strlow(lwFilename);
 
+		for (auto& cur : FileSyntaxList)
+		{
+			if (strstr(lwFilename, cur.extension))
+			{
+				curFile = &cur;
+				SyntaxProcess = true;
+				break;
+			}
+		}
+	}
 	ProgramLoop();
 }
 

@@ -7,6 +7,18 @@
 #include "Fnvhash.hpp"
 #include "ConsoleLib.hpp"
 
+#pragma warning( push )
+#pragma warning( disable : 4477)
+constexpr RGB HexToRGB(const char* bytes)
+{
+	RGB ret;
+	if (bytes[0] != '#')
+	{
+		return ret;
+	}
+	sscanf_s(bytes, "#%02x%02x%02x", &ret.Red,&ret.Green, &ret.Blue);
+	return ret;
+}
 struct Line_s
 {
 	uint32_t linenumber = 0;
@@ -55,8 +67,6 @@ struct Syntax
 	}
 };
 
-
-
 struct SyntaxConfig
 {
 	char *CommentPrefixes[5]{0,0,0,0,0};
@@ -73,6 +83,7 @@ struct SyntaxConfig
 	SC Variable  = SC::Variable;
 	SC Number    = SC::Number;
 	SC Control   = SC::Control;
+	SC Foreground = SC::Foreground;
 };
 
 
@@ -89,6 +100,52 @@ struct SyntaxKeyword
 	}
 };
 
+struct FileSyntax
+{
+	char extension[20]{};
+	std::vector<SyntaxKeyword> Keywords;
+	std::vector<Syntax> syntaxList;
+	SyntaxConfig syntaxConfig;
+
+
+	inline FileSyntax(const char* extension)
+	{
+		strlow(extension, this->extension);
+	}
+	template<size_t size>
+	inline void PushSyntaxList(const Syntax(&list)[size])
+	{
+		for (size_t i = 0; i < size; i++)
+		{
+			syntaxList.push_back(list[i]);
+		}
+	}
+	template<size_t size>
+	inline void PushCommentPrefixList(const char* (&list)[size])
+	{
+		syntaxConfig.CheckComments = true;
+		syntaxConfig.CommentPrefixesCount = size;
+		if (size < 5)
+		{
+			memcpy_s(syntaxConfig.CommentPrefixes, sizeof(char*) * 5,
+				list, sizeof(char*) * size);
+		}
+
+	}
+	inline void PushKeyword(SyntaxKeyword keyword)
+	{
+		Keywords.push_back(keyword);
+	}
+	inline char* strlow(const char* in, char* out)
+	{
+		for (int i = 0; in[i] && i < 20; i++)
+		{
+			out[i] = tolower(in[i]);
+		}
+		return out;
+	}
+};
+
 class TextView
 {
 public:
@@ -99,38 +156,27 @@ public:
 	}
 	void Start(char* filename);
 
+	inline void Register(FileSyntax& fs)
+	{
+		if (fs.extension != nullptr)
+		{
+			FileSyntaxList.push_back(fs);
+			return;
+		}
+		fprintf(stderr, "Tried to register FileSyntax but it had no extension.");
+	}
 	COLOR UIColor = COLOR::LIGHTYELLOW;
-	SyntaxConfig syntaxConfig;
-	template<size_t size>
-	inline void PushSyntaxList(const Syntax(&list)[size])
-	{
-		for (size_t i = 0; i < size; i++)
-		{
-			syntaxList.push_back(list[i]);
-		}
-	}
-	template<size_t size>
-	inline void PushCommentPrefixList(const char*(&list)[size])
-	{
-		syntaxConfig.CheckComments = true;
-		syntaxConfig.CommentPrefixesCount = size;
-		if (size < 5)
-		{
-			memcpy_s(syntaxConfig.CommentPrefixes, sizeof(char*) * 5,
-				list, sizeof(char*) * size); 
-		}
-		
-	}
-	inline void PushKeyword(SyntaxKeyword keyword)
-	{
-		keywordList.push_back(keyword);
-	}
+
+	
 private:
-	std::vector<Syntax> syntaxList;
-	std::vector<SyntaxKeyword> keywordList;
+
 	bool SyntaxProcess = false;
+	std::vector<FileSyntax> FileSyntaxList;
+	FileSyntax* curFile = nullptr;
+	
 
 	char* filename = nullptr;
+	char  lwFilename[20]{};
 	static const int MaxMessages = 3;
 	std::vector<char*> Messages;
 	std::vector<Line_s> LineVector;
@@ -138,6 +184,8 @@ private:
 	void PushMessage(const char* message, ...);
 	void ProgramLoop();
 	void ReadLines();
+#define SETPALLETE(SC, RGB) Console::SetPalletteEntry(COLOR(SC), HexToRGB(RGB))
+
 	inline void InitVSColorScheme()
 	{
 		UIColor = COLOR::LIGHTYELLOW;
@@ -166,7 +214,20 @@ private:
 		Console::SetPalletteEntry(COLOR(Keyword), { 255, 121, 198 });
 		Console::SetPalletteEntry(COLOR(Function), { 255, 121, 198 });
 	}
-
+	inline void InitTokyoNightColorScheme()
+	{
+		UIColor = COLOR::DEFAULT;
+		SETPALLETE(Background, "#1a1b26");
+		SETPALLETE(Foreground, "#a9b1d6");
+		SETPALLETE(String,     "#9ece6a");
+		SETPALLETE(Comment,    "#565f89");
+		SETPALLETE(Number,     "#ff9e64");
+		SETPALLETE(Control,    "#bb9af7");
+		SETPALLETE(Variable,   "#c0caf5");
+		SETPALLETE(Function,   "#7aa2f7");
+		SETPALLETE(Class,      "#c0caf5");
+		SETPALLETE(Keyword,    "#a9b1d6");
+	}
 	void HandleCommand(char* command);
 	void DrawHorizontalLine();
 	void ClearLine();
