@@ -1,0 +1,181 @@
+state Base
+{
+	Conditions
+	{
+		if AlwaysTrue == 1 goto Think
+	}
+	Actions
+	{
+		SetMessage "name="fighttimer" "value=0"
+		SetAtOnceRowDistance Dist 1.5
+	}
+}
+
+state Think
+{
+	Conditions
+	{
+		if BeenSpawned == 1 goto JustBeenSpawned
+		if AlwaysTrue == 1 goto IdleGotNoOpponent
+	}
+	Actions
+	{
+	}
+}
+
+state JustBeenSpawned
+{
+	Conditions
+	{
+		if GotOpponent == 1 goto GunFight
+		
+		if Timer > 0 and
+		if GotOpponent == 0 goto IdleGotNoOpponent
+	}
+	Actions
+	{
+		ReleaseLocator
+		ResetTimer "time=-20"
+		FollowPlayer "run"
+	}
+}
+
+state IdleGotNoOpponent
+{
+	Conditions
+	{	
+		if GotOpponent == 1 goto GoToLocator
+
+		if PartyUnderCover == 0 and
+		if EitherPlayerInTriggerArea == 1.0 goto TriggeredByArea
+	}
+	Actions
+	{
+		GoToOrigin "waittime=10"
+	}
+}
+
+state TriggeredByArea
+{
+	Conditions
+	{
+		if GotLocator == 1 goto GoToLocator
+		if GotOpponent == 1 goto GunFight
+	}
+	Actions
+	{
+		FollowPlayer
+	}
+}
+
+state GoToLocator
+{
+	Conditions
+	{
+		if GotLocator == 0 goto GunFight
+		if OpponentRange < 1.5 goto GunFight
+	}
+	Actions
+	{
+		GoToLocator "wait=0.5"
+		SetState "StaticGunAttack"
+	}
+}
+
+state StaticGunAttack
+{
+	Conditions
+	{
+		if GotOpponent == 0 goto Think
+		if LocatorRange > 0.25 goto GoToLocator
+		if OpponentRange < 1.5 goto GunFight
+	}
+	Actions
+	{
+		EngageOpponent "static" "fXirerange=viewrange"
+	}
+}
+
+state GunFight
+{
+	Conditions
+	{
+		if GotOpponent == 0 goto Think
+		
+		if OpponentIsAVehicle == 0 and
+		if OpponentRange < 1.0 goto FistFight
+	}
+	Actions
+	{
+		EngageOpponent "goalrange 1.5" "firerange=3"
+	}
+}
+
+state FistFight
+{
+	Conditions
+{
+		if GotOpponent == 0 goto StopFistFight
+		
+		if OpponentIsAVehicle == 1 goto StopFistFight
+		
+		if OpponentRange > 1.5 goto StopFistFight
+
+		if OpponentRange < 0.2 and
+		if Message "fighttimer" == 0 goto SetFightTimer
+
+		if OpponentRange < 0.2 goto TimeAttack
+	}
+	Actions
+	{
+		ResetTimer
+		CanUseWeapon "FALSE"
+		SetUseOneAtOnce "True"
+		AttackOpponent "goalrange=0.1"
+	}
+}
+
+state StopFistFight
+{
+	Conditions
+	{
+		if GotOpponent == 0 goto Think
+		
+		if OpponentRange > 1.5 goto GunFight
+	}
+	Actions
+	{
+		CanUseWeapon "TRUE"
+		SetUseOneAtOnce "FALSE"
+	}
+}
+
+state TimeAttack
+{
+	Conditions
+	{
+		if Timer > 3 goto Backoff
+		
+		if OpponentIsAVehicle == 1 goto Backoff
+	}
+	Actions
+	{
+		ResetTimer
+		CanUseWeapon "FALSE"
+		SetUseOneAtOnce "True"
+		AttackOpponent "goalrange=0.1"
+	}
+}
+
+state Backoff
+{
+	Conditions
+	{
+		if OpponentRange > 2 goto Fight
+	}
+	Actions
+	{
+		MoveAwayFromPlayer 2
+		Setstate StopFistFight
+	}
+}

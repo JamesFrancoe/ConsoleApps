@@ -1,0 +1,87 @@
+//Generic Civilian In Peril Script
+state Base
+{
+	Conditions 
+	{	
+		if Timer > 1 and
+		if NumInSetAlive "10" == 0 goto Rescued_Init
+		
+		if OriginRangeXZ > 0.5 goto Base
+	}
+	Actions 
+	{
+		UseTimeBasedUpdate "FALSE"
+		DontPush
+		SetSide "Goody"
+		GoToOrigin
+		DontPush "FALSE"
+	}
+}
+
+state Rescued_Init
+{
+	Conditions 
+	{
+		if OffScreenTimer > 1 goto Kill
+	}
+	Actions 
+	{
+		DontPush "FALSE"
+		
+		SetSuperCounter "todo" "me" "woohoo!"
+		PressJumpButton
+		FaceCamera "1"
+		
+		SetState "Rescued_Decide"
+	}
+}
+
+state Rescued_Decide
+{
+	Conditions
+	{
+		if GotLocator == 1 goto Rescued_GoToLoc
+		if AlwaysTrue == 1 goto Rescued_Wander
+	}
+	Actions
+	{
+	}
+}
+
+state Rescued_GoToLoc
+{
+	Conditions
+	{
+		if OffScreenTimer > 1 goto Kill
+		
+		if GotLocator == 0 goto Rescued_Wander
+	}
+	Actions
+	{
+		GoToLocator
+		;;SetState "Kill" ;;actually, wait for them to be off screen
+	}
+}
+
+state Rescued_Wander
+{
+	Conditions
+	{
+		if OffScreenTimer > 1 goto Kill
+	}
+	Actions
+	{
+		FollowPath
+	}
+}
+
+state Kill
+{
+	Conditions 
+	{
+	}
+	Actions 
+	{
+		Kill
+	}
+}
